@@ -8,7 +8,7 @@ from opt import config_parser
 def reconstruction(args):
 
 
-    pbar = tqdm(range(args.n_iters), minters = args.progress_refresh_rate, file = sys.stdout)
+    pbar = tqdm(range(args.n_iters), miniters = args.progress_refresh_rate, file = sys.stdout)
 
     for iteration in pbar:
 
