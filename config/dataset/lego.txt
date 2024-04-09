@@ -1,0 +1,4 @@
+dataset_name = blender
+datadir = /project/jacobcha/nk643/data_src/nerf_synthetic/lego
+
+n_iters = 30000

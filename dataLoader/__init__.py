@@ -1,3 +1,2 @@
-from .blender import BlenderDataset
+# from .blender import BlenderDataset
 
-dataset_dict = {'blender': BlenderDataset}
