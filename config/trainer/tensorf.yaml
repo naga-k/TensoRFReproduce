@@ -1,0 +1,2 @@
+_target_: runner.trainer.tensorf.TensoRFTrainer
+dataset: lego

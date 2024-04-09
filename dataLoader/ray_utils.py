@@ -29,8 +29,5 @@ def get_rays(directions, c2w):
     rays_o = rays_o.view(-1, 3)
     return rays_o, rays_d
 
-# if __name__ == "__main__":
-#     t1 = get_ray_directions(10, 10, (1, 1))
-#     t2 = get_ray_directions_2(10, 10, (1, 1))
-#     is_equal = torch.allclose(t1, t2)
-#     print(is_equal)
+if __name__ == "__main__":
+    t1 = get_ray_directions(10, 10, (1, 1))

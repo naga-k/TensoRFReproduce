@@ -1,0 +1,6 @@
+_target_: dataLoader.blender.BlenderDataset
+datadir: "/project/jacobcha/nk643/data_src/nerf_synthetic/lego"
+split: "train"
+downsample: 1.0
+is_stack: false
+N_vis: -1
