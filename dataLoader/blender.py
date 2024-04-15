@@ -51,8 +51,6 @@ class BlenderDataset(Dataset):
         '''
         Read the metadata file.
         '''
-
-        #TODO: Modify this line so "transforms_.."/metadata file is set in cofigs
         metafile = os.path.join(self.datadir, f"transforms_{self.split}.json")
         with open(metafile, 'r') as f:
             self.meta = json.load(f)
@@ -156,3 +154,5 @@ if __name__ == "__main__":
             print(f"sample masks data {sample['masks']}")
         print()
 
+if __name__ == "dataLoader.blender":
+    print("__name__ : ", __name__)
