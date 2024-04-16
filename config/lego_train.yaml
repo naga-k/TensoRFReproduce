@@ -1,3 +1,0 @@
-defaults:
-  - trainer: tensorf
-  - dataset: lego
