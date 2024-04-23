@@ -1,0 +1,83 @@
+defaults:
+  - _self_
+  - trainer: tensorf_lego
+  - override hydra/hydra_logging: disabled
+  - override hydra/job_logging: disabled
+
+hydra:
+  output_subdir: null
+  run:
+    dir: .
+
+
+dataset_name: "blender"
+datadir: "/project/jacobcha/nk643/data_src/nerf_synthetic/lego"
+expname: "tensorf_lego_VM"
+basedir: "./log"
+n_iters: 30000
+batch_size: 4096
+N_voxel_init: 2097156 # 128**3
+N_voxel_final: 27000000 # 300**3
+upsamp_list:
+  - 2000
+  - 3000
+  - 4000
+  - 5500
+  - 7000
+update_AlphaMask_list:
+  - 2000
+  - 4000
+N_vis: 5
+vis_every: 10000
+render_test: 1
+n_lamb_sigma:
+  - 16
+  - 16
+  - 16
+n_lamb_sh:
+  - 48
+  - 48
+  - 48
+model_name: "TensorVMSplit"
+shadingMode: "MLP_Fea"
+fea2denseAct: "softplus"
+view_pe: 2
+fea_pe: 2
+L1_weight_inital: 8e-5
+L1_weight_rest: 4e-5
+rm_weight_mask_thre: 1e-4
+
+
+config: null
+add_timestamp: 0
+progress_refresh_rate: 10
+with_depth: false
+downsample_train: 1.0
+downsample_test: 1.0
+lr_init: 0.02
+lr_basis: 0.001
+lr_decay_iters: -1
+lr_decay_target_ratio: 0.1
+lr_upsample_reset: 1
+Ortho_weight: 0.0
+TV_weight_density: 0.0
+TV_weight_app: 0.0
+data_dim_color: 27
+alpha_mask_thre: 0.0001
+distance_scale: 25
+density_shift: -10
+pos_pe: 6
+featureC: 128
+render_only: 0
+render_train: 0
+render_path: 0
+export_mesh: 0
+lindisp: false
+perturb: 1.0
+accumulate_decay: 0.998
+ndc_ray: 0
+nSamples: 1000000
+step_ratio: 0.5
+white_bkgd: false
+idx_view: 0
+ckpt: null

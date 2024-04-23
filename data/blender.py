@@ -153,6 +153,3 @@ if __name__ == "__main__":
             print(f"sample masks: {sample['masks'].shape} ")
             print(f"sample masks data {sample['masks']}")
         print()
-
-if __name__ == "dataLoader.blender":
-    print("__name__ : ", __name__)
