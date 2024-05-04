@@ -1,6 +1,6 @@
 defaults:
   - _self_
-  - trainer: tensorf_lego
+  - predictor: tensorf_lego
   - override hydra/hydra_logging: disabled
   - override hydra/job_logging: disabled
 
@@ -9,12 +9,12 @@ hydra:
   run:
     dir: .
 
-
+ckpt: "/project/jacobcha/nk643/TensoRFReproduce/log/tensorf_lego_VM/tensorf_lego_VM.th"
 dataset_name: "blender"
 datadir: "/project/jacobcha/nk643/data_src/nerf_synthetic/lego"
 expname: "tensorf_lego_VM"
 basedir: "./log"
-n_iters: 3000
+n_iters: 30000
 batch_size: 4096
 N_voxel_init: 2097156 # 128**3
 N_voxel_final: 27000000 # 300**3
@@ -80,4 +80,3 @@ nSamples: 1000000
 step_ratio: 0.5
 white_bkgd: false
 idx_view: 0
-ckpt: null
