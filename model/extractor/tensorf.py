@@ -110,19 +110,6 @@ class TensorVMSplit(torch.nn.Module):
         self.shadingMode, self.pos_pe, self.view_pe, self.fea_pe, self.featureC = shadingMode, pos_pe, view_pe, fea_pe, featureC
         self.init_render_func(shadingMode, pos_pe, view_pe, fea_pe, featureC, device)
 
-    def update_stepSize(self, gridSize):
-        print("aabb", self.aabb.view(-1))
-        print("grid size", gridSize)
-        self.aabbSize = self.aabb[1] - self.aabb[0]
-        self.invaabbSize = 2.0 / self.aabbSize
-        self.gridSize = torch.LongTensor(gridSize).to(self.device)
-        self.units = self.aabbSize / (self.gridSize - 1)
-        self.stepSize = torch.mean(self.units) * self.step_ratio
-        self.aabbDiag = torch.sqrt(torch.sum(torch.square(self.aabbSize)))
-        self.nSamples = int((self.aabbDiag / self.stepSize).item()) + 1
-        print("sampling step size: ", self.stepSize)
-        print("sampling number: ", self.nSamples)
-
     def init_svd_volume(self, res, device):
         self.density_plane, self.density_line = self.init_one_svd(self.density_n_comp, self.gridSize, 0.1, device)
         self.app_plane, self.app_line = self.init_one_svd(self.app_n_comp, self.gridSize, 0.1, device)
