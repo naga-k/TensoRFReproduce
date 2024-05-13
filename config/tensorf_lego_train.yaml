@@ -14,7 +14,7 @@ dataset_name: "blender"
 datadir: "/project/jacobcha/nk643/data_src/nerf_synthetic/lego"
 expname: "tensorf_lego_VM"
 basedir: "./log"
-n_iters: 30000
+n_iters: 3000
 batch_size: 4096
 N_voxel_init: 2097156 # 128**3
 N_voxel_final: 27000000 # 300**3
@@ -31,13 +31,19 @@ N_vis: 5
 vis_every: 10000
 render_test: 1
 n_lamb_sigma:
-  - 16
-  - 16
-  - 16
+  - 8
+  - 8
+  - 8
+  - 8
+  - 8
+  - 8
 n_lamb_sh:
-  - 48
-  - 48
-  - 48
+  - 24
+  - 24
+  - 24
+  - 24
+  - 24
+  - 24
 model_name: "TensorVMSplit"
 shadingMode: "MLP_Fea"
 fea2denseAct: "softplus"
