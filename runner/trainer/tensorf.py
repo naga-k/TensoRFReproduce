@@ -130,7 +130,7 @@ class TensoRFTrainer:
         os.makedirs(f'{logfolder}/imgs_vis', exist_ok=True)
         os.makedirs(f'{logfolder}/imgs_rgba', exist_ok=True)
         os.makedirs(f'{logfolder}/rgba', exist_ok=True)
-        summary_writer = SummaryWriter(logfolder)
+        summary_writer = SummaryWriter(logfolder + f"{args.dataset_name}_{args.expname}")
 
         # init parameters
         # tensorVM, renderer = init_parameters(args, train_dataset.scene_bbox.to(device), reso_list[0])
