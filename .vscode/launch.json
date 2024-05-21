@@ -5,10 +5,10 @@
     "version": "0.2.0",
     "configurations": [
         {
-            "name": "test.py",
+            "name": "test_single.py",
             "type": "debugpy",
             "request": "launch",
-            "program": "/project/jacobcha/nk643/TensoRFReproduce/test.py",
+            "program": "/project/jacobcha/nk643/TensoRFReproduce/test_single.py",
             "console": "integratedTerminal"
         },
         {

@@ -103,7 +103,6 @@ class TensorVMSplit(torch.nn.Module):
 
         self.matMode = [[0, 1], [1, 2], [0, 2], [0, 1], [1, 2], [0, 2]]
         self.vecMode = [2, 0, 1, 2, 0, 1]
-        self.normals = torch.tensor([[0, 0, 1], [1, 0, 0], [0, 1, 0], [0, 0, -1], [-1, 0, 0], [0, -1, 0]], device=device, dtype=torch.float)
         self.comp_w = [1, 1, 1]
 
         self.init_svd_volume(gridSize[0], device)
