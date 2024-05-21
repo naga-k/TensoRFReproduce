@@ -31,13 +31,19 @@ N_vis: 5
 vis_every: 10000
 render_test: 1
 n_lamb_sigma:
-  - 16
-  - 16
-  - 16
+  - 8
+  - 8
+  - 8
+  - 8
+  - 8
+  - 8
 n_lamb_sh:
-  - 48
-  - 48
-  - 48
+  - 24
+  - 24
+  - 24
+  - 24
+  - 24
+  - 24
 model_name: "TensorVMSplit"
 shadingMode: "MLP_Fea"
 fea2denseAct: "softplus"

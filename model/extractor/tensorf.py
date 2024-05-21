@@ -78,8 +78,8 @@ class TensorVMSplit(torch.nn.Module):
                  fea2denseAct='softplus'):
         super(TensorVMSplit, self).__init__()
 
-        self.density_n_comp = density_n_comp
-        self.app_n_comp = appearance_n_comp
+        self.density_n_comp = list(density_n_comp)
+        self.app_n_comp = list(appearance_n_comp)
         self.app_dim = app_dim
         self.aabb = aabb
         self.alphaMask = alphaMask
@@ -101,11 +101,14 @@ class TensorVMSplit(torch.nn.Module):
 
         self.update_stepSize(gridSize)
 
-        self.matMode = [[0, 1], [1, 2], [0, 2]]
-        self.vecMode = [2, 0, 1]
+        self.matMode = [[0, 1], [1, 2], [0, 2], [0, 1], [1, 2], [0, 2]]
+        self.vecMode = [2, 0, 1, 2, 0, 1]
+        self.normals = torch.tensor([[0, 0, 1], [1, 0, 0], [0, 1, 0], [0, 0, -1], [-1, 0, 0], [0, -1, 0]], device=device, dtype=torch.float)
         self.comp_w = [1, 1, 1]
 
         self.init_svd_volume(gridSize[0], device)
+
+        self.normals = torch.tensor([[0, 0, 1], [1, 0, 0], [0, 1, 0], [0, 0, -1], [-1, 0, 0], [0, -1, 0]], device=device)
 
         self.shadingMode, self.pos_pe, self.view_pe, self.fea_pe, self.featureC = shadingMode, pos_pe, view_pe, fea_pe, featureC
         self.init_render_func(shadingMode, pos_pe, view_pe, fea_pe, featureC, device)
@@ -126,7 +129,6 @@ class TensorVMSplit(torch.nn.Module):
                 torch.nn.Parameter(scale * torch.randn((1, n_component[i], gridSize[vec_id], 1))))
 
         return torch.nn.ParameterList(plane_coef).to(device), torch.nn.ParameterList(line_coef).to(device)
-
 
     def init_render_func(self, shadingMode, pos_pe, view_pe, fea_pe, featureC, device):
         pass
@@ -153,37 +155,91 @@ class TensorVMSplit(torch.nn.Module):
     def compute_features(self, xyz_sampled):
         pass
 
-    def compute_densityfeature(self, xyz_sampled):
+    def compute_densityfeature(self, xyz_sampled, viewdirs = None):
 
         # plane + line basis
-        coordinate_plane = torch.stack((xyz_sampled[..., self.matMode[0]], xyz_sampled[..., self.matMode[1]], xyz_sampled[..., self.matMode[2]])).detach().view(3, -1, 1, 2)
-        coordinate_line = torch.stack((xyz_sampled[..., self.vecMode[0]], xyz_sampled[..., self.vecMode[1]], xyz_sampled[..., self.vecMode[2]]))
-        coordinate_line = torch.stack((torch.zeros_like(coordinate_line), coordinate_line), dim=-1).detach().view(3, -1, 1, 2)
-        
+
+        coordinate_plane = torch.stack(([xyz_sampled[..., self.matMode[idx]] for idx in range(len(self.matMode))])).detach().view(len(self.matMode), -1, 1, 2)
+        coordinate_line = torch.stack(([xyz_sampled[..., self.vecMode[idx]] for idx in range(len(self.vecMode))]))
+        coordinate_line = torch.stack((torch.zeros_like(coordinate_line), coordinate_line), dim=-1).detach().view(len(self.vecMode), -1, 1, 2)
+
         sigma_feature = torch.zeros((xyz_sampled.shape[0],), device=xyz_sampled.device)
-        for idx_plane in range(len(self.density_plane)):
-            plane_coef_point = F.grid_sample(self.density_plane[idx_plane], coordinate_plane[[idx_plane]],
-                                                align_corners=True).view(-1, *xyz_sampled.shape[:1])
-            line_coef_point = F.grid_sample(self.density_line[idx_plane], coordinate_line[[idx_plane]],
-                                            align_corners=True).view(-1, *xyz_sampled.shape[:1])
-            sigma_feature = sigma_feature + torch.sum(plane_coef_point * line_coef_point, dim=0)
+        
+        for idx_plane in range(len(self.density_n_comp)):
+
+            if viewdirs is None:
+                coordinate_plane_at_idx = coordinate_plane[[idx_plane]]
+                coordinate_line_at_idx = coordinate_line[[idx_plane]]
+                xyz_sampled_at_idx = xyz_sampled
+                is_visible = True
+            else:
+                is_visible = torch.matmul(self.normals[idx_plane].view(1, 3).float(), viewdirs.view(-1, 3).T).view(-1) > 0
+                coordinate_plane_at_idx = coordinate_plane[[idx_plane]][:, is_visible, :, :]
+                coordinate_line_at_idx = coordinate_line[[idx_plane]][:, is_visible, :, :]
+                xyz_sampled_at_idx = xyz_sampled[is_visible]
+                
+            if xyz_sampled_at_idx.shape[0] == 0:
+                continue
+
+            plane_coef_point = F.grid_sample(self.density_plane[idx_plane], coordinate_plane_at_idx,
+                                                align_corners=True).view(-1, *xyz_sampled_at_idx.shape[:1])
+            line_coef_point = F.grid_sample(self.density_line[idx_plane], coordinate_line_at_idx,
+                                            align_corners=True).view(-1, *xyz_sampled_at_idx.shape[:1])
+            
+            sigma_feature[is_visible] = sigma_feature[is_visible] + torch.sum(plane_coef_point * line_coef_point, dim=0)
 
         return sigma_feature
 
 
-    def compute_appfeature(self, xyz_sampled):
+    def compute_appfeature(self, xyz_sampled, viewdirs = None):
 
         # plane + line basis
-        coordinate_plane = torch.stack((xyz_sampled[..., self.matMode[0]], xyz_sampled[..., self.matMode[1]], xyz_sampled[..., self.matMode[2]])).detach().view(3, -1, 1, 2)
-        coordinate_line = torch.stack((xyz_sampled[..., self.vecMode[0]], xyz_sampled[..., self.vecMode[1]], xyz_sampled[..., self.vecMode[2]]))
-        coordinate_line = torch.stack((torch.zeros_like(coordinate_line), coordinate_line), dim=-1).detach().view(3, -1, 1, 2)
 
+        coordinate_plane = torch.stack(([xyz_sampled[..., self.matMode[idx]] for idx in range(len(self.matMode))])).detach().view(len(self.matMode), -1, 1, 2)
+        coordinate_line = torch.stack(([xyz_sampled[..., self.vecMode[idx]] for idx in range(len(self.vecMode))]))
+        coordinate_line = torch.stack((torch.zeros_like(coordinate_line), coordinate_line), dim=-1).detach().view(len(self.vecMode), -1, 1, 2)
+      
         plane_coef_point,line_coef_point = [],[]
-        for idx_plane in range(len(self.app_plane)):
-            plane_coef_point.append(F.grid_sample(self.app_plane[idx_plane], coordinate_plane[[idx_plane]],
-                                                align_corners=True).view(-1, *xyz_sampled.shape[:1]))
-            line_coef_point.append(F.grid_sample(self.app_line[idx_plane], coordinate_line[[idx_plane]],
-                                            align_corners=True).view(-1, *xyz_sampled.shape[:1]))
+
+        for idx_plane in range(len(self.app_n_comp)):
+            if viewdirs is None:
+                coordinate_plane_at_idx = coordinate_plane[[idx_plane]]
+                coordinate_line_at_idx = coordinate_line[[idx_plane]]
+                xyz_sampled_at_idx = xyz_sampled
+                is_visible = True
+            else:
+                is_visible = torch.matmul(self.normals[idx_plane].view(1, 3).float(), viewdirs.view(-1, 3).T).view(-1) > 0
+                coordinate_plane_at_idx = coordinate_plane[[idx_plane]][:, is_visible, :, :]
+                coordinate_line_at_idx = coordinate_line[[idx_plane]][:, is_visible, :, :]
+                xyz_sampled_at_idx = xyz_sampled[is_visible]
+
+            plane_coef_at_idx = torch.zeros((self.app_n_comp[idx_plane],*xyz_sampled.shape[:1]), device=xyz_sampled.device)
+            line_coef_at_idx = torch.zeros((self.app_n_comp[idx_plane],*xyz_sampled.shape[:1]), device=xyz_sampled.device)
+
+            if xyz_sampled_at_idx.shape[0] == 0:
+                plane_coef_point.append(plane_coef_at_idx)
+                line_coef_point.append(line_coef_at_idx)
+                continue
+
+            # print("plane coef shape", plane_coef_at_idx.shape)
+            # print("line coef shape", line_coef_at_idx.shape)
+            # print("xyz sampled shape", xyz_sampled_at_idx.shape)
+
+            # print("coordinate plane shape", coordinate_plane_at_idx.shape)
+            # print("coordinate line shape", coordinate_line_at_idx.shape)
+
+            # print("app plane shape", self.app_plane[idx_plane].shape)
+            # print("app line shape", self.app_line[idx_plane].shape)
+            
+            plane_coef_at_idx[:, is_visible] = F.grid_sample(self.app_plane[idx_plane], coordinate_plane_at_idx,
+                                                align_corners=True).view(-1, *xyz_sampled_at_idx.shape[:1])
+            line_coef_at_idx[:, is_visible] = F.grid_sample(self.app_line[idx_plane], coordinate_line_at_idx,
+                                            align_corners=True).view(-1, *xyz_sampled_at_idx.shape[:1])
+
+            plane_coef_point.append(plane_coef_at_idx)
+            line_coef_point.append(line_coef_at_idx)
+            
+
         plane_coef_point, line_coef_point = torch.cat(plane_coef_point), torch.cat(line_coef_point)
 
 
@@ -488,10 +544,10 @@ class TensorVMSplit(torch.nn.Module):
 
     def forward(self, rays_chunk, white_bg = True, is_train=True, ndc_ray = False, N_samples = -1):
         
-        viewdirs =  rays_chunk[:, 3:6]
+        viewdirs =  rays_chunk[:, 3:6].float()
 
         if ndc_ray:
-            xyz_sampled, z_vals, ray_valid = self.sample_ray(rays_chunk[:, :3], viewdirs, is_train=is_train,
+            xyz_sampled, z_vals, ray_valid = self.sample_ray_ndc(rays_chunk[:, :3], viewdirs, is_train=is_train,
                                                              N_samples=N_samples)
             dists = torch.cat((z_vals[:, 1:] - z_vals[:, :-1], torch.zeros_like(z_vals[:, :1])), dim=-1)
             rays_norm = torch.norm(viewdirs, dim=-1, keepdim=True)
@@ -520,7 +576,7 @@ class TensorVMSplit(torch.nn.Module):
         if ray_valid.any():
 
             xyz_sampled = self.normalize_coord(xyz_sampled)
-            sigma_feature = self.compute_densityfeature(xyz_sampled[ray_valid])
+            sigma_feature = self.compute_densityfeature(xyz_sampled[ray_valid], viewdirs[ray_valid])
 
             validsigma = self.feature2density(sigma_feature)
             sigma[ray_valid] = validsigma
@@ -530,7 +586,7 @@ class TensorVMSplit(torch.nn.Module):
         app_mask = weight > self.rayMarch_weight_thres
 
         if app_mask.any() :
-            app_features = self.compute_appfeature(xyz_sampled[app_mask])
+            app_features = self.compute_appfeature(xyz_sampled[app_mask], viewdirs[app_mask])
             valid_rgbs = self.renderModule(xyz_sampled[app_mask], viewdirs[app_mask], app_features)
             rgb[app_mask] = valid_rgbs
 
