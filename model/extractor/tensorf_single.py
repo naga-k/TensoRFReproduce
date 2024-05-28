@@ -70,13 +70,13 @@ class MLPRender_Fea(torch.nn.Module):
 
         return rgb
 
-class TensorVMSplit(torch.nn.Module):
+class TensorVMSplitSingle(torch.nn.Module):
     def __init__(self, aabb, gridSize, device, density_n_comp=8, appearance_n_comp=24, app_dim=27,
                  shadingMode='MLP_PE', alphaMask=None, near_far=[2.0, 6.0],
                  density_shift=-10, alphaMask_thres=0.001, distance_scale=25, rayMarch_weight_thres=0.0001,
                  pos_pe=6, view_pe=6, fea_pe=6, featureC=128, step_ratio=2.0,
                  fea2denseAct='softplus'):
-        super(TensorVMSplit, self).__init__()
+        super(TensorVMSplitSingle, self).__init__()
 
         self.density_n_comp = list(density_n_comp)
         self.app_n_comp = list(appearance_n_comp)
@@ -219,6 +219,17 @@ class TensorVMSplit(torch.nn.Module):
                 plane_coef_point.append(plane_coef_at_idx)
                 line_coef_point.append(line_coef_at_idx)
                 continue
+
+            # print("plane coef shape", plane_coef_at_idx.shape)
+            # print("line coef shape", line_coef_at_idx.shape)
+            # print("xyz sampled shape", xyz_sampled_at_idx.shape)
+
+            # print("coordinate plane shape", coordinate_plane_at_idx.shape)
+            # print("coordinate line shape", coordinate_line_at_idx.shape)
+
+            # print("app plane shape", self.app_plane[idx_plane].shape)
+            # print("app line shape", self.app_line[idx_plane].shape)
+            
             plane_coef_at_idx[:, is_visible] = F.grid_sample(self.app_plane[idx_plane], coordinate_plane_at_idx,
                                                 align_corners=True).view(-1, *xyz_sampled_at_idx.shape[:1])
             line_coef_at_idx[:, is_visible] = F.grid_sample(self.app_line[idx_plane], coordinate_line_at_idx,

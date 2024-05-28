@@ -34,6 +34,9 @@ def evaluation(test_dataset,tensorf, args, renderer, savePath=None, N_vis=5, prt
         W, H = test_dataset.img_wh
         rays = samples.view(-1,samples.shape[-1])
 
+        #TODO: refactor this so its appropriate
+        get_valid_normal_idx(rays, device=device)
+
         rgb_map, _, depth_map, _, _ = renderer(rays, tensorf, chunk=4096, N_samples=N_samples,
                                         ndc_ray=ndc_ray, white_bg = white_bg, device=device)
         rgb_map = rgb_map.clamp(0.0, 1.0)
@@ -77,6 +80,22 @@ def evaluation(test_dataset,tensorf, args, renderer, savePath=None, N_vis=5, prt
             np.savetxt(f'{savePath}/{prtx}mean.txt', np.asarray([psnr]))
     return PSNRs
 
+@torch.no_grad()
+def get_valid_normal_idx(rays, device = 'cuda'):
+    viewdirs = rays[..., 3:6].to(device)
+    print("viewdirs", viewdirs.shape)
+    all_normals = torch.tensor([[0, 0, 1], [1, 0, 0], [0, 1, 0], [0, 0, -1], [-1, 0, 0], [0, -1, 0]], device=device, dtype=torch.float)
+    is_visible = torch.matmul(viewdirs, all_normals.T) < 0
+    print("is_visible", is_visible.shape)
+    
+    visible = is_visible.any(dim=0)
+    count = torch.sum(is_visible, dim=0)
+    print("count", count)
+    print("visible", visible)
+    valid_normal_idx = torch.where(visible)
+    print(valid_normal_idx)
+
+    return valid_normal_idx
 
 class TensoRFPredictor:
     def __init__(self, args: DictConfig):

@@ -5,6 +5,7 @@ from tqdm.auto import tqdm
 import json, random
 from data.blender import BlenderDataset
 from model.extractor.tensorf import TensorVMSplit
+from model.extractor.tensorf_single import TensorVMSplitSingle
 from model.renderer.tensorf import TensoRFRenderer
 from .tensorf_utils import *
 from torch.utils.tensorboard import SummaryWriter
@@ -78,15 +79,24 @@ def evaluation_one_image(test_dataset,tensorf, args, renderer, savePath=None, te
             np.savetxt(f'{savePath}/{prtx}mean.txt', np.asarray([psnr]))
     return PSNRs
 
-# @torch.no_grad()
-# def get_valid_normal_idx(test_dataset, img_idx, device = 'cuda'):
-#     rays = test_dataset.all_rays[img_idx].view(-1,test_dataset.all_rays.shape[-1])
-#     print(rays.shape)
-#     viewdirs = rays[..., 3:6]
-#     print(viewdirs[10])
-#     all_normals = torch.tensor([[0, 0, 1], [1, 0, 0], [0, 1, 0], [0, 0, -1], [-1, 0, 0], [0, -1, 0]], device=device)
+@torch.no_grad()
+def get_valid_normal_idx(test_dataset, img_idx, device = 'cuda'):
+    rays = test_dataset.all_rays[img_idx].view(-1,test_dataset.all_rays.shape[-1])
+    viewdirs = rays[..., 3:6].to(device)
+    print("viewdirs", viewdirs.shape)
+    all_normals = torch.tensor([[0, 0, 1], [1, 0, 0], [0, 1, 0], [0, 0, -1], [-1, 0, 0], [0, -1, 0]], device=device, dtype=torch.float)
+    is_visible = torch.matmul(viewdirs, all_normals.T) < 0
+    print("is_visible", is_visible.shape)
+    
+    visible = is_visible.any(dim=0)
+    count = torch.sum(is_visible, dim=1)
+    print("all 3", (count == 3).all())
+    print("count", count)
+    print("visible", visible)
+    valid_normal_idx = torch.where(visible)
+    print(valid_normal_idx)
 
-#     return None
+    return valid_normal_idx
 
 class TensoRFPredictorSingle:
     def __init__(self, args: DictConfig):
@@ -107,7 +117,7 @@ class TensoRFPredictorSingle:
         white_bg = test_dataset.white_bg
         ndc_ray = args.ndc_ray
 
-        # valid_normal_idx = get_valid_normal_idx(test_dataset, test_img_idx, device=device)
+        valid_normal_idx = get_valid_normal_idx(test_dataset, test_img_idx, device=device)
 
         if not os.path.exists(args.ckpt):
             print('the ckpt path does not exists!!')

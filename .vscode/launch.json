@@ -5,6 +5,13 @@
     "version": "0.2.0",
     "configurations": [
         {
+            "name": "train.py",
+            "type": "debugpy",
+            "request": "launch",
+            "program": "/project/jacobcha/nk643/TensoRFReproduce/train.py",
+            "console": "integratedTerminal"
+        }
+        {
             "name": "test_single.py",
             "type": "debugpy",
             "request": "launch",
@@ -12,10 +19,10 @@
             "console": "integratedTerminal"
         },
         {
-            "name": "train.py",
+            "name": "test.py",
             "type": "debugpy",
             "request": "launch",
-            "program": "/project/jacobcha/nk643/TensoRFReproduce/train.py",
+            "program": "/project/jacobcha/nk643/TensoRFReproduce/test.py",
             "console": "integratedTerminal"
         }
     ]
