@@ -120,7 +120,7 @@ class TensorVMSplit(torch.nn.Module):
 
     def init_one_svd(self, n_component, gridSize, scale, device):
         plane_coef, line_coef = [], []
-        for i in range(len(self.vecMode)):
+        for i in range(len(n_component)):
             vec_id = self.vecMode[i]
             mat_id_0, mat_id_1 = self.matMode[i]
             plane_coef.append(torch.nn.Parameter(
@@ -214,9 +214,9 @@ class TensorVMSplit(torch.nn.Module):
         return self.basis_mat((plane_coef_point * line_coef_point).T)
     
     @torch.no_grad()
-    def up_sampling_VM(self, plane_coef, line_coef, res_target):
+    def up_sampling_VM(self, n_component, plane_coef, line_coef, res_target):
 
-        for i in range(len(self.vecMode)):
+        for i in range(len(n_component)):
             vec_id = self.vecMode[i]
             mat_id_0, mat_id_1 = self.matMode[i]
             plane_coef[i] = torch.nn.Parameter(
@@ -229,8 +229,8 @@ class TensorVMSplit(torch.nn.Module):
 
     @torch.no_grad()
     def upsample_volume_grid(self, res_target):
-        self.app_plane, self.app_line = self.up_sampling_VM(self.app_plane, self.app_line, res_target)
-        self.density_plane, self.density_line = self.up_sampling_VM(self.density_plane, self.density_line, res_target)
+        self.app_plane, self.app_line = self.up_sampling_VM(self.app_n_comp, self.app_plane, self.app_line, res_target)
+        self.density_plane, self.density_line = self.up_sampling_VM(self.density_n_comp, self.density_plane, self.density_line, res_target)
 
         self.update_stepSize(res_target)
         print(f'upsamping to {res_target}')
@@ -245,18 +245,24 @@ class TensorVMSplit(torch.nn.Module):
         t_l, b_r = torch.round(torch.round(t_l)).long(), torch.round(b_r).long() + 1
         b_r = torch.stack([b_r, self.gridSize]).amin(0)
 
-        for i in range(len(self.vecMode)):
+        for i in range(len(self.density_n_comp)):
             mode0 = self.vecMode[i]
             self.density_line[i] = torch.nn.Parameter(
                 self.density_line[i].data[..., t_l[mode0]:b_r[mode0], :]
             )
-            self.app_line[i] = torch.nn.Parameter(
-                self.app_line[i].data[..., t_l[mode0]:b_r[mode0], :]
-            )
+
             mode0, mode1 = self.matMode[i]
             self.density_plane[i] = torch.nn.Parameter(
                 self.density_plane[i].data[..., t_l[mode1]:b_r[mode1], t_l[mode0]:b_r[mode0]]
             )
+
+        for i in range(len(self.app_n_comp)):
+            mode0 = self.vecMode[i]
+            self.app_line[i] = torch.nn.Parameter(
+                self.app_line[i].data[..., t_l[mode0]:b_r[mode0], :]
+            )
+
+            mode0, mode1 = self.matMode[i]
             self.app_plane[i] = torch.nn.Parameter(
                 self.app_plane[i].data[..., t_l[mode1]:b_r[mode1], t_l[mode0]:b_r[mode0]]
             )
